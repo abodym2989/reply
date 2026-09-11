@@ -1,0 +1,47 @@
+name: Deploy independent bridge to Solana mainnet
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout private repository
+        uses: actions/checkout@v4
+
+      - name: Install Solana, Rust, and Anchor
+        shell: bash
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Select Anchor 0.30.1
+        shell: bash
+        run: |
+          export PATH="$HOME/.cargo/bin:$HOME/.local/share/solana/install/active_release/bin:$PATH"
+          avm install 0.30.1
+          avm use 0.30.1
+          solana --version
+          anchor --version
+
+      - name: Build and deploy both programs
+        shell: bash
+        env:
+          SOLANA_PRIVATE_KEY: ${{ secrets.SOLANA_PRIVATE_KEY }}
+          SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
+        run: |
+          export PATH="$HOME/.cargo/bin:$HOME/.local/share/solana/install/active_release/bin:$PATH"
+          python3 deploy.py | tee deployment-details.json
+
+      - name: Save deployment details
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-details
+          path: deployment-details.json
+          retention-days: 30
