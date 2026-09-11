@@ -1,0 +1,18 @@
+[features]
+seeds = false
+skip-lint = false
+
+[programs.localnet]
+independent_burn_bridge = "Brdg111111111111111111111111111111111111111"
+message_transmitter = "MsgT111111111111111111111111111111111111111"
+
+[programs.mainnet]
+independent_burn_bridge = "Brdg111111111111111111111111111111111111111"
+message_transmitter = "MsgT111111111111111111111111111111111111111"
+
+[provider]
+cluster = "mainnet"
+wallet = "~/.config/solana/id.json"
+
+[workspace]
+members = ["programs/independent_burn_bridge"]
