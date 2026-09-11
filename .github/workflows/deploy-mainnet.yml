@@ -24,7 +24,7 @@ jobs:
             ~/.local/share/solana
             ~/.cargo/bin
             ~/.avm
-          key: solana-anchor-0.30.1-v4
+          key: solana-anchor-0.30.1-v5
 
       - name: Install Solana and Anchor
         if: steps.tool-cache.outputs.cache-hit != 'true'
@@ -46,7 +46,7 @@ jobs:
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
 
-      - name: Verify tools
+      - name: Verify installed tools
         shell: bash
         run: |
           set -euo pipefail
@@ -70,21 +70,32 @@ jobs:
 
           cargo +1.79.0 generate-lockfile
 
-          echo "Dependency requiring incompatible toml_datetime:"
-          cargo +1.79.0 tree \
-            -i 'toml_datetime@1.1.1+spec-1.1.0' || true
+          cargo +1.79.0 update \
+            -p 'borsh@1.8.1' \
+            --precise 1.5.7
 
           cargo +1.79.0 update \
-            -p 'toml_datetime@1.1.1+spec-1.1.0' \
-            --precise 0.6.11
+            -p 'proc-macro-crate@3.5.0' \
+            --precise 3.1.0
+
+          cargo +1.79.0 update \
+            -p 'blake3' \
+            --precise 1.5.5
 
           sed -i 's/^version = 4$/version = 3/' Cargo.lock
 
-          echo "Cargo.lock format:"
+          echo "Cargo.lock version:"
           grep '^version = ' Cargo.lock | head -1
 
-          echo "Selected toml_datetime packages:"
-          grep -A2 'name = "toml_datetime"' Cargo.lock
+          echo "Relevant dependency versions:"
+          cargo +1.79.0 tree |
+            grep -E 'borsh v1\.|borsh-derive v1\.|proc-macro-crate|toml_edit|toml_datetime|blake3' |
+            sort -u
+
+          if cargo +1.79.0 tree | grep -q 'toml_datetime v1\.'; then
+            echo "::error::Incompatible toml_datetime v1 remains in the dependency tree."
+            exit 1
+          fi
 
       - name: Validate deployment secrets
         shell: bash
@@ -95,12 +106,12 @@ jobs:
           set -euo pipefail
 
           if [ -z "${SOLANA_PRIVATE_KEY:-}" ]; then
-            echo "::error::SOLANA_PRIVATE_KEY secret is missing."
+            echo "::error::SOLANA_PRIVATE_KEY repository secret is missing."
             exit 1
           fi
 
           if [ -z "${SOLANA_RPC_URL:-}" ]; then
-            echo "::error::SOLANA_RPC_URL secret is missing."
+            echo "::error::SOLANA_RPC_URL repository secret is missing."
             exit 1
           fi
 
