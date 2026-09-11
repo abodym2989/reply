@@ -31,13 +31,17 @@ jobs:
           anchor --version
 
       - name: Build and deploy both programs
-        shell: bash
-        env:
-          SOLANA_PRIVATE_KEY: ${{ secrets.SOLANA_PRIVATE_KEY }}
-          SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
-        run: |
-          export PATH="$HOME/.cargo/bin:$HOME/.local/share/solana/install/active_release/bin:$PATH"
-          python3 deploy.py | tee deployment-details.json
+      shell: bash
+  env:
+    SOLANA_PRIVATE_KEY: ${{ secrets.SOLANA_PRIVATE_KEY }}
+    SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
+  run: |
+    export PATH="$HOME/.cargo/bin:$HOME/.local/share/solana/install/active_release/bin:$PATH"
+
+    cargo generate-lockfile
+    sed -i 's/^version = 4$/version = 3/' Cargo.lock
+
+    python3 deploy.py | tee deployment-details.json
 
       - name: Save deployment details
         uses: actions/upload-artifact@v4
